@@ -16,16 +16,26 @@ import platform
 from aiohttp import web
 
 # ==================== 环境变量 ====================
-UUID = os.environ.get('UUID', '021e1223-7032-4fdf-8e3b-90e190f89b32')
-DOMAIN = os.environ.get('DOMAIN', 'mghosting.cnav.cn.eu.org')
+UUID = os.environ.get('UUID', '4bda47ec-5ca6-42ff-a225-7861f492a71f')
+DOMAIN = os.environ.get('DOMAIN', 'temalix.cnav.cn.eu.org')
 SUB_PATH = os.environ.get('SUB_PATH', 'hello-word')
-NAME = os.environ.get('NAME', 'mghosting')
+NAME = os.environ.get('NAME', 'temalix')
 WSPATH = os.environ.get('WSPATH', UUID[:8])
-PORT = int(os.environ.get('SERVER_PORT') or os.environ.get('PORT') or 3000)
 AUTO_ACCESS = os.environ.get('AUTO_ACCESS', '').lower() == 'true'
 DEBUG = os.environ.get('DEBUG', '').lower() == 'true'
-CLOUDFLARED_TOKEN = os.environ.get('CLOUDFLARED_TOKEN', 'eyJhIjoiZDZlNGIzNDY3N2MzNjljOTViODM3YTcxNWFjZWNjYzciLCJ0IjoiMjBlY2Y0N2QtOGQwNy00MjNlLTljNGMtZmU5MDVlN2MxZDQ0IiwicyI6Ik4yTmtaR05tWW1ZdE5UZGlZUzAwTW1Ka0xUZzVNalF0TWpsaE1qZG1ZV0kxTVdSbCJ9')
+CLOUDFLARED_TOKEN = os.environ.get('CLOUDFLARED_TOKEN', 'eyJhIjoiZDZlNGIzNDY3N2MzNjljOTViODM3YTcxNWFjZWNjYzciLCJ0IjoiODQ3ODAyZTktYzMzZS00YWQ2LTllMzYtZjMwZTA5N2Y5MThmIiwicyI6IlltWTRaakUzWVRjdFl6aGpZeTAwWkRnNExUZzBOelF0TURVM09UVmhaVFJqTmpGayJ9')
 
+def _get_env_port():
+    """安全解析端口环境变量，跳过空值/0/无效值"""
+    for key in ['SERVER_PORT', 'PORT']:
+        val = os.environ.get(key, '').strip()
+        if val and val.isdigit():
+            p = int(val)
+            if 1 <= p <= 65535:
+                return p
+    return 3000
+
+PORT = _get_env_port()
 
 # 全局变量
 CurrentDomain = DOMAIN
@@ -39,85 +49,12 @@ BLOCKED_DOMAINS = [
     'testmy.net', 'bandwidth.place', 'speed.io', 'librespeed.org', 'speedcheck.org'
 ]
 
-# ==================== 日志配置 ====================
-log_level = logging.DEBUG if DEBUG else logging.INFO
+# ==================== 日志配置（静默模式） ====================
+log_level = logging.DEBUG if DEBUG else logging.WARNING
 logging.basicConfig(level=log_level, format='%(asctime)s - %(levelname)s - %(message)s')
 for name in ['aiohttp.access', 'aiohttp.server', 'aiohttp.client', 'aiohttp.internal', 'aiohttp.websocket']:
     logging.getLogger(name).setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
-
-# ==================== 页面 HTML ====================
-FAKE_HTML = """<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alex's Tech Blog - 记录技术与生活</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f5f5; color: #333; line-height: 1.6; }
-        header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem 0; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        header h1 { font-size: 2rem; margin-bottom: 0.5rem; }
-        header p { opacity: 0.9; font-size: 1.1rem; }
-        nav { background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
-        nav ul { list-style: none; display: flex; justify-content: center; flex-wrap: wrap; max-width: 800px; margin: 0 auto; }
-        nav li { margin: 0; }
-        nav a { display: block; padding: 1rem 1.5rem; text-decoration: none; color: #555; font-weight: 500; transition: color 0.3s; }
-        nav a:hover { color: #667eea; }
-        .container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-        .post { background: white; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.05); transition: transform 0.2s; }
-        .post:hover { transform: translateY(-3px); box-shadow: 0 5px 25px rgba(0,0,0,0.1); }
-        .post h2 { color: #333; margin-bottom: 0.5rem; font-size: 1.5rem; }
-        .meta { color: #999; font-size: 0.9rem; margin-bottom: 1rem; }
-        .post p { color: #555; margin-bottom: 1rem; }
-        .tag { display: inline-block; background: #f0f0f0; color: #666; padding: 0.2rem 0.8rem; border-radius: 20px; font-size: 0.85rem; margin-right: 0.5rem; }
-        footer { text-align: center; padding: 2rem; color: #999; font-size: 0.9rem; margin-top: 3rem; border-top: 1px solid #eee; }
-        @media (max-width: 600px) { header h1 { font-size: 1.5rem; } .post { padding: 1.5rem; } }
-    </style>
-</head>
-<body>
-    <header>
-        <h1>Alex's Tech Blog</h1>
-        <p>分享编程、开源与数码生活</p>
-    </header>
-    <nav>
-        <ul>
-            <li><a href="/">首页</a></li>
-            <li><a href="/">文章</a></li>
-            <li><a href="/">项目</a></li>
-            <li><a href="/">关于</a></li>
-        </ul>
-    </nav>
-    <div class="container">
-        <article class="post">
-            <h2>使用 Python 构建高性能异步服务</h2>
-            <div class="meta">2026-08-10 · 阅读 2,341 · Python</div>
-            <p>在现代 Web 开发中，异步编程已经成为提升并发能力的关键技术。本文将深入探讨 asyncio 与 aiohttp 的最佳实践，帮助你构建能够支撑数万并发连接的服务...</p>
-            <span class="tag">Python</span>
-            <span class="tag">Async</span>
-            <span class="tag">Backend</span>
-        </article>
-        <article class="post">
-            <h2>我的 Homelab 搭建日记：从 0 到 All-in-One</h2>
-            <div class="meta">2026-07-28 · 阅读 4,128 · 数码</div>
-            <p>最近把家里闲置的 NUC 改造成了 All-in-One 服务器，跑了 Docker、NAS、智能家居中枢。这篇文章记录了硬件选型、系统部署和踩坑全过程...</p>
-            <span class="tag">Homelab</span>
-            <span class="tag">Docker</span>
-            <span class="tag">NAS</span>
-        </article>
-        <article class="post">
-            <h2>Git 工作流进阶：Rebase 还是 Merge？</h2>
-            <div class="meta">2026-07-15 · 阅读 1,892 · 工具</div>
-            <p>团队协作中，分支管理策略往往决定了代码历史的整洁程度。今天我们来聊聊什么时候该用 rebase，什么时候该保留 merge commit，以及如何优雅地解决冲突...</p>
-            <span class="tag">Git</span>
-            <span class="tag">DevOps</span>
-        </article>
-    </div>
-    <footer>
-        <p> Alex's Tech Blog · Powered by Python & Love</p>
-    </footer>
-</body>
-</html>"""
 
 # ==================== 工具函数 ====================
 def is_port_available(port, host='0.0.0.0'):
@@ -177,7 +114,7 @@ async def get_ip():
                         Tls = 'none'
                         CurrentPort = PORT
         except Exception as e:
-            logger.error(f'Failed to get IP: {e}')
+            logger.debug(f'Failed to get IP: {e}')
             CurrentDomain = 'change-your-domain.com'
             Tls = 'tls'
             CurrentPort = 443
@@ -300,12 +237,10 @@ class ProxyHandler:
 
                 await asyncio.gather(forward_ws_to_tcp(), forward_tcp_to_ws())
             except Exception as e:
-                if DEBUG:
-                    logger.error(f"Connection error: {e}")
+                logger.debug(f"Connection error: {e}")
             return True
         except Exception as e:
-            if DEBUG:
-                logger.error(f"Trojan handler error: {e}")
+            logger.debug(f"Trojan handler error: {e}")
             return False
 
 # ==================== WebSocket 处理器 ====================
@@ -333,18 +268,20 @@ async def websocket_handler(request):
     except asyncio.TimeoutError:
         await ws.close()
     except Exception as e:
-        if DEBUG:
-            logger.error(f"WebSocket handler error: {e}")
+        logger.debug(f"WebSocket handler error: {e}")
         await ws.close()
     return ws
 
 # ==================== HTTP 处理器 ====================
 async def http_handler(request):
-    # 伪装页面：根路径和常见路径
-    if request.path in ('/', '/index.html', '/about', '/blog', '/posts'):
-        return web.Response(text=FAKE_HTML, content_type='text/html')
+    if request.path == '/':
+        try:
+            with open('index.html', 'r', encoding='utf-8') as f:
+                content = f.read()
+            return web.Response(text=content, content_type='text/html')
+        except:
+            return web.Response(text='Hello world!', content_type='text/html')
 
-    # 订阅路径
     if request.path == f'/{SUB_PATH}':
         await get_isp()
         await get_ip()
@@ -361,8 +298,7 @@ def get_cloudflared_url():
     arch = platform.machine().lower()
     if 'arm' in arch or 'aarch64' in arch:
         return 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64'
-    else:
-        return 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64'
+    return 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64'
 
 async def download_cloudflared():
     if not CLOUDFLARED_TOKEN:
@@ -376,9 +312,8 @@ async def download_cloudflared():
                     with open('cloudflared', 'wb') as f:
                         f.write(content)
                     os.chmod('cloudflared', 0o755)
-                    logger.info('✅ cloudflared downloaded successfully')
     except Exception as e:
-        logger.error(f'cloudflared download failed: {e}')
+        logger.debug(f'cloudflared download failed: {e}')
 
 async def run_cloudflared():
     if not CLOUDFLARED_TOKEN:
@@ -386,17 +321,27 @@ async def run_cloudflared():
     try:
         result = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
         if './cloudflared' in result.stdout and 'tunnel' in result.stdout:
-            logger.info('cloudflared is already running, skip...')
             return
     except:
         pass
+
     await download_cloudflared()
+
+    if not os.path.exists('cloudflared'):
+        return
+
     command = f'nohup ./cloudflared tunnel --no-autoupdate run --token {CLOUDFLARED_TOKEN} >/dev/null 2>&1 &'
     try:
         subprocess.Popen(command, shell=True, executable='/bin/bash')
-        logger.info('✅ cloudflared tunnel started successfully')
+        # 等待进程加载到内存后删除二进制文件
+        await asyncio.sleep(3)
+        if os.path.exists('cloudflared'):
+            try:
+                os.remove('cloudflared')
+            except Exception as e:
+                logger.debug(f'Failed to remove cloudflared: {e}')
     except Exception as e:
-        logger.error(f'Error running cloudflared: {e}')
+        logger.debug(f'Error running cloudflared: {e}')
 
 # ==================== 保活任务 ====================
 async def add_access_task():
@@ -408,7 +353,6 @@ async def add_access_task():
             await session.post("https://oooo.serv00.net/add-url",
                                json={"url": full_url},
                                headers={'Content-Type': 'application/json'})
-        logger.info('Automatic Access Task added successfully')
     except:
         pass
 
@@ -423,23 +367,17 @@ def cleanup_files():
 # ==================== 主函数 ====================
 async def main():
     actual_port = PORT
+
     if not is_port_available(actual_port):
-        logger.warning(f"Port {actual_port} is already in use, finding available port...")
         new_port = find_available_port(actual_port + 1)
         if new_port:
             actual_port = new_port
-            logger.info(f"Using port {actual_port} instead of {PORT}")
         else:
-            logger.error("No available ports found")
+            print(f"ERROR - No available ports found", flush=True)
             sys.exit(1)
 
     app = web.Application()
-    # 路由注册
     app.router.add_get('/', http_handler)
-    app.router.add_get('/index.html', http_handler)
-    app.router.add_get('/about', http_handler)
-    app.router.add_get('/blog', http_handler)
-    app.router.add_get('/posts', http_handler)
     app.router.add_get(f'/{SUB_PATH}', http_handler)
     app.router.add_get(f'/{WSPATH}', websocket_handler)
 
@@ -447,7 +385,9 @@ async def main():
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', actual_port)
     await site.start()
-    logger.info(f"✅ server is running on port {actual_port}")
+
+    # 唯一控制台输出
+    print(f"INFO - ✅ server is running on port {actual_port}", flush=True)
 
     asyncio.create_task(run_cloudflared())
 
