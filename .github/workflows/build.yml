@@ -8,32 +8,38 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            runs-on: ubuntu-latest
+          - arch: arm64
+            runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runs-on }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up QEMU (for ARM64)
-        if: matrix.arch == 'arm64'
-        uses: docker/setup-qemu-action@v3
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          platforms: arm64
+          python-version: '3.11'
 
-      - name: Build binary via PyInstaller
+      - name: Install build dependencies
         run: |
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            docker run --rm -v "$PWD:/src" --platform linux/arm64 \
-              python:3.11-slim bash -c "
-                cd /src && pip install pyinstaller aiohttp && \
-                pyinstaller --onefile --name server server.py
-              "
-          else
-            pip install pyinstaller aiohttp
-            pyinstaller --onefile --name server server.py
-          fi
+          sudo apt-get update
+          sudo apt-get install -y binutils
+          pip install pyinstaller aiohttp
+
+      - name: Build binary
+        run: |
+          python -m PyInstaller --onefile --name server server.py
+
+      - name: Check binary info
+        run: |
+          file ./dist/server
+          ls -lh ./dist/server
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
