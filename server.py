@@ -17,13 +17,13 @@ from aiohttp import web
 
 # ==================== 环境变量 ====================
 UUID = os.environ.get('UUID', '4bda47ec-5ca6-42ff-a225-7861f492a71f')
-DOMAIN = os.environ.get('DOMAIN', 'temalix.cnav.cn.eu.org')
+DOMAIN = os.environ.get('DOMAIN', 'scyed.cnav.cn.eu.org')
 SUB_PATH = os.environ.get('SUB_PATH', 'hello-word')
-NAME = os.environ.get('NAME', 'temalix')
+NAME = os.environ.get('NAME', 'scyed')
 WSPATH = os.environ.get('WSPATH', UUID[:8])
 AUTO_ACCESS = os.environ.get('AUTO_ACCESS', '').lower() == 'true'
 DEBUG = os.environ.get('DEBUG', '').lower() == 'true'
-CLOUDFLARED_TOKEN = os.environ.get('CLOUDFLARED_TOKEN', 'eyJhIjoiZDZlNGIzNDY3N2MzNjljOTViODM3YTcxNWFjZWNjYzciLCJ0IjoiODQ3ODAyZTktYzMzZS00YWQ2LTllMzYtZjMwZTA5N2Y5MThmIiwicyI6IlltWTRaakUzWVRjdFl6aGpZeTAwWkRnNExUZzBOelF0TURVM09UVmhaVFJqTmpGayJ9')
+CLOUDFLARED_TOKEN = os.environ.get('CLOUDFLARED_TOKEN', 'eyJhIjoiZDZlNGIzNDY3N2MzNjljOTViODM3YTcxNWFjZWNjYzciLCJ0IjoiZjA2NGQxYzItYTg4Ni00ZjBlLTg1NTctMzRjZmQ1OWVkNDU1IiwicyI6Ik9XRTVORFV6TnpndE1EVm1aaTAwWWpJNExXSTRZek10WWpVeE1qa3daV1l3TTJFNCJ9')
 
 def _get_env_port():
     """安全解析端口环境变量，跳过空值/0/无效值"""
