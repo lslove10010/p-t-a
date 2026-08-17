@@ -1,0 +1,51 @@
+name: Build Binary
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (for ARM64)
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build binary via PyInstaller
+        run: |
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            docker run --rm -v "$PWD:/src" --platform linux/arm64 \
+              python:3.11-slim bash -c "
+                cd /src && pip install pyinstaller aiohttp && \
+                pyinstaller --onefile --name server server.py
+              "
+          else
+            pip install pyinstaller aiohttp
+            pyinstaller --onefile --name server server.py
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-linux-${{ matrix.arch }}
+          path: dist/server
+
+      - name: Release binary
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/server
+          name: Release ${{ github.ref_name }} (${{ matrix.arch }})
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
