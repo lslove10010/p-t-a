@@ -1,4 +1,4 @@
-name: Build Binary
+name: Build Static Binary
 
 on:
   push:
@@ -13,30 +13,34 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runs-on: ubuntu-latest
+            platform: linux/amd64
           - arch: arm64
-            runs-on: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runs-on }}
+            platform: linux/arm64
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      - name: Install build dependencies
+      - name: Build static binary in Alpine
         run: |
-          sudo apt-get update
-          sudo apt-get install -y binutils
-          pip install pyinstaller aiohttp
+          docker run --rm --platform ${{ matrix.platform }} \
+            -v "$PWD:/src" -w /src \
+            python:3.11-alpine sh -c "
+              apk add --no-cache gcc musl-dev linux-headers zlib-dev
+              pip install pyinstaller aiohttp
+              python -m PyInstaller \
+                --onefile \
+                --name server \
+                --strip \
+                --hidden-import aiohttp \
+                --hidden-import aiohttp.web \
+                server.py
+            "
 
-      - name: Build binary
-        run: |
-          python -m PyInstaller --onefile --name server server.py
-
-      - name: Check binary info
+      - name: Check binary
         run: |
           file ./dist/server
           ls -lh ./dist/server
@@ -44,7 +48,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: server-linux-${{ matrix.arch }}
+          name: server-linux-${{ matrix.arch }}-static
           path: dist/server
 
       - name: Release binary
@@ -52,6 +56,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist/server
-          name: Release ${{ github.ref_name }} (${{ matrix.arch }})
+          name: Release ${{ github.ref_name }} (${{ matrix.arch }} static)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
