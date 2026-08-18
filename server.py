@@ -33,7 +33,7 @@ def _get_env_port():
             p = int(val)
             if 1 <= p <= 65535:
                 return p
-    return 24041
+    return 3000
 
 PORT = _get_env_port()
 
